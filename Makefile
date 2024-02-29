@@ -25,7 +25,7 @@ $(EXECUTABLE): $(SOURCES) $(BUILD_DIR)
 	$(CC) $(SOURCES) -o $(EXECUTABLE)
 
 $(BUILD_DIR):
-	mkdir $(BUILD_DIR)
+	@mkdir $(BUILD_DIR)
 
 clean:
-	rm -rf $(BUILD_DIR)
+	@rm -rf $(BUILD_DIR)
