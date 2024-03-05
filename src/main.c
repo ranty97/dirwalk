@@ -1,9 +1,13 @@
+#define _POSIX_SOURCE
+#define _XOPEN_SOURCE
+#define _XOPEN_SOURCE_EXTENDED
+#define _DEFAULT_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <dirent.h>
 #include <string.h>
 #include <sys/stat.h>
-
 
 struct Options {
     char isDirectory;
@@ -13,11 +17,11 @@ struct Options {
     char* dir;
 };
 
-struct Options parse(int argc, char **argv) {
+struct Options parse(int argc, char** argv) {
     struct Options options = {0, 0, 0, 0, NULL};
 
     for(int i = 1; i < argc; i++) {
-        if(argv[i][0] == "-") {
+        if(argv[i][0] == '-') {
             for(int j = 1; argv[i][j] != '\0'; j++) {
                 switch (argv[i][j])
                 {
@@ -48,15 +52,54 @@ struct Options parse(int argc, char **argv) {
     }
 
     if((options.isDirectory || options.isFile || options.isLink) == 0) {
-        options.isDirectory, options.isFile, options.isLink = 1;
+        options.isDirectory =1; options.isFile = 1; options.isLink = 1;
     }
 
     return options;
 }
 
+void dirWalk(char *path, struct Options *options){
+    struct dirent** dinfo;
 
-int main(int argc, char **argv) {
+    int quantity = scandir(path, &dinfo, NULL, options->sort ? alphasort : NULL);
+
+    for(int i = 0; i < quantity; i++) {
+        struct stat fileinfo;
+
+        char* newPath = calloc(strlen(path) + strlen(dinfo[i]->d_name) + 2, sizeof(char));
+        strcpy(newPath, path);
+        strcat(newPath, "/");
+        strcat(newPath, dinfo[i]->d_name);
+
+        lstat(newPath, &fileinfo);
+
+        if(!strcmp(".", dinfo[i]->d_name) || !strcmp("..", dinfo[i]->d_name)) {
+            free(newPath);
+            free(dinfo[i]);
+            continue;
+        }
+        if(S_ISDIR(fileinfo.st_mode)) {
+            if(options->isDirectory)
+                printf("%s\n", newPath);
+            dirWalk(newPath, options);
+        }
+        else if(S_ISLNK(fileinfo.st_mode) && options->isLink) {
+            printf("%s\n", newPath);
+        }
+        else if(S_ISREG(fileinfo.st_mode) && options->isFile) {
+            printf("%s\n", newPath);
+        }
+
+        free(dinfo[i]);
+        free(newPath);
+    }
+    free(dinfo);
+}
+
+int main(int argc, char** argv) {
+    struct Options options = parse(argc, argv);
+
+    dirWalk(options.dir, &options);
     
-    
-    return;
+    return 0;
 }
